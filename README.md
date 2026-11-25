@@ -2,10 +2,11 @@
 
 [![Build](https://github.com/Aegis-plus/TauriWA/actions/workflows/build.yml/badge.svg)](https://github.com/Aegis-plus/TauriWA/actions/workflows/build.yml)
 
-A small native WhatsApp Web client written in Rust, using the system WebKitGTK through
-[tao](https://github.com/tauri-apps/tao) and [wry](https://github.com/tauri-apps/wry)
-(the window and webview libraries behind Tauri), with
-[ksni](https://github.com/iovxw/ksni) for the tray icon and [zbus](https://github.com/dbus2/zbus) for D-Bus.
+A WhatsApp Web client for Linux written in Rust. WhatsApp Web runs in Chromium,
+embedded through [CEF](https://github.com/chromiumembedded/cef) with the Tauri project's
+[cef-rs](https://github.com/tauri-apps/cef-rs) bindings, so it behaves like WhatsApp
+in Chrome. [ksni](https://github.com/iovxw/ksni) provides the tray icon and
+[zbus](https://github.com/dbus2/zbus) the D-Bus interface.
 
 TauriWA is a Rust port of [ElecWhat](https://github.com/piec/elecwhat) by Pierre Carru.
 
@@ -17,7 +18,7 @@ TauriWA is a Rust port of [ElecWhat](https://github.com/piec/elecwhat) by Pierre
 * Spellcheck
 * CLI & D-Bus interface to show/hide/toggle window
 * Dock unread count badge
-* Small and light: a single ~5 MB binary, no bundled browser
+* Same engine as Chrome (Chromium 156): WhatsApp Web runs as smoothly as in the browser
 * Built by GitHub Actions (CI) from this repository
 * Preserve window position and zoom level
 * Custom user scripts in `~/.config/tauriwa/user-scripts/*.js`
@@ -34,7 +35,10 @@ Tagged versions are published in [Releases].
 They contain:
 * `tauriwa_<version>-1_amd64.deb` for Debian/Ubuntu: `sudo apt install ./tauriwa_*.deb`
 * `tauriwa-<version>-1.x86_64.rpm` for Fedora/openSUSE: `sudo dnf install ./tauriwa-*.rpm`
-* `tauriwa-<version>-linux-x86_64.tar.xz`: the binary, to run anywhere WebKitGTK 4.1 is installed
+* `tauriwa-<version>-linux-x86_64.tar.xz`: the app and its Chromium runtime in one
+  folder, run `./tauriwa` from it
+
+The app bundles Chromium: about 95 MB to download, 370 MB installed (in `/usr/lib/tauriwa`).
 
 To publish a release, push a tag:
 
@@ -43,28 +47,29 @@ git tag v1.0.0 && git push origin v1.0.0
 ```
 
 ### From source
-Dependencies: Rust (stable), WebKitGTK 4.1 and GTK 3 development files.
-
-```bash
-sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev   # Debian/Ubuntu
-sudo dnf install webkit2gtk4.1-devel gtk3-devel        # Fedora
-sudo pacman -S webkit2gtk-4.1 gtk3                     # Arch
-```
+Dependencies: Rust (stable), CMake and a C++ compiler. The build downloads the
+matching CEF (Chromium) distribution, about 340 MB; set `CEF_PATH` to a directory to
+keep it between builds.
 
 ```bash
 cargo build --release
+packaging/bundle-cef.sh
 ```
 
-Then copy `target/release/tauriwa` to your `PATH`, `packaging/tauriwa.desktop` to
-`~/.local/share/applications/` and `packaging/tauriwa.svg` to
-`~/.local/share/icons/hicolor/scalable/apps/tauriwa.svg`.
-Or build a package with [cargo-deb](https://github.com/kornelski/cargo-deb) (`cargo deb`) or
+`target/bundle/tauriwa/` then holds the app next to its Chromium runtime: run
+`target/bundle/tauriwa/tauriwa`. To install it, build a package with
+[cargo-deb](https://github.com/kornelski/cargo-deb) (`cargo deb --no-build --no-strip`) or
 [cargo-generate-rpm](https://github.com/cat-in-136/cargo-generate-rpm) (`cargo generate-rpm`).
+`cargo run` also works for development.
 
 ### Voice/video calls
-Calls depend on WebRTC support in your WebKitGTK version (2.40+ built with WebRTC,
-plus the GStreamer plugins), and on WhatsApp Web accepting it. They may not work
-on every distribution.
+Microphone and camera access is granted to WhatsApp Web only. Calls work
+when WhatsApp Web offers them in Chrome.
+
+### Chromium sandbox
+Chromium's own process sandbox is turned off: it needs a setuid helper or
+unprivileged user namespaces, which some distributions (Ubuntu 24.04) restrict.
+The app only loads WhatsApp Web.
 
 ## Command line
 
@@ -146,7 +151,8 @@ and `Ctrl+Shift+I` (developer tools).
 
 ## Data
 * `~/.config/tauriwa/`: `config.json`, `persistent-state.json` (window position, zoom), `user-scripts/`, `user-icons/`
-* `~/.local/share/tauriwa/webview/`: WhatsApp Web session (cookies, local storage, cache)
+* `~/.local/share/tauriwa/chromium/`: the Chromium profile with the WhatsApp Web session
+  (cookies, local storage, cache)
 
 ### Coming from ElecWhat
 On first start, `config.json`, `user-scripts/` and `user-icons/` are copied from `~/.config/elecwhat/`.

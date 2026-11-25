@@ -5,12 +5,17 @@
 (() => {
   if (window.tauriwa) return;
 
-  // replaced by the Rust side with a JSON object
+  // replaced by the Rust side with a JSON object and a random prefix
   const state = __TAURIWA_STATE__;
+  const IPC_PREFIX = __TAURIWA_IPC_PREFIX__;
 
+  // Messages reach the Rust side as console messages starting with
+  // IPC_PREFIX (see `on_console_message` in src/app.rs), which swallows them.
+  // Keep the original console.debug: the page may replace it later.
+  const consoleDebug = console.debug.bind(console);
   const post = (method, ...args) => {
     try {
-      window.ipc.postMessage(JSON.stringify({ method, args }));
+      consoleDebug(IPC_PREFIX + JSON.stringify({ method, args }));
     } catch (err) {
       console.error("tauriwa ipc", method, err);
     }
@@ -33,6 +38,11 @@
     fullscreenToggle: () => post("fullscreenToggle"),
     devTools: () => post("devTools"),
   };
+  // the page's own confirm box, used by the Rust side for questions
+  // (clear cache, broken config file)
+  Object.defineProperty(window, "__tauriwaConfirm", {
+    value: (id, message) => setTimeout(() => post("confirmResult", id, !!window.confirm(message)), 0),
+  });
   Object.defineProperty(window, "tauriwa", { value: Object.freeze(api) });
 
   // --- Notifications ---
