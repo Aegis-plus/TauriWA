@@ -1,6 +1,6 @@
 # TauriWA - Simple desktop WhatsApp client for Linux
 
-[![Build](https://github.com/aegis-plus/elecwhat/actions/workflows/build.yml/badge.svg)](https://github.com/aegis-plus/elecwhat/actions/workflows/build.yml)
+[![Build](https://github.com/Aegis-plus/TauriWA/actions/workflows/build.yml/badge.svg)](https://github.com/Aegis-plus/TauriWA/actions/workflows/build.yml)
 
 A small native WhatsApp Web client written in Rust, using the system WebKitGTK through
 [tao](https://github.com/tauri-apps/tao) and [wry](https://github.com/tauri-apps/wry)
@@ -27,7 +27,7 @@ TauriWA is a Rust port of [ElecWhat](https://github.com/piec/elecwhat) by Pierre
 ## Install
 
 ### Download
-Every push is built by [GitHub Actions](https://github.com/aegis-plus/elecwhat/actions/workflows/build.yml):
+Every push is built by [GitHub Actions](https://github.com/Aegis-plus/TauriWA/actions/workflows/build.yml):
 open a run and download `tauriwa-linux-x86_64` from its *Artifacts*.
 Tagged versions are published in [Releases].
 
@@ -162,4 +162,4 @@ You'll have to link your device again (scan the QR code): the browser session ca
 ## License
 GPL-3.0-or-later, see [LICENSE](LICENSE).
 
-[Releases]: https://github.com/aegis-plus/elecwhat/releases
+[Releases]: https://github.com/Aegis-plus/TauriWA/releases
