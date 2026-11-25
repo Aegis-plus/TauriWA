@@ -62,5 +62,5 @@ assets = [
   { source = "packaging/io.github.aegis_plus.tauriwa.metainfo.xml", dest = "/usr/share/metainfo/io.github.aegis_plus.tauriwa.metainfo.xml", mode = "644" },
 ]
 [package.metadata.generate-rpm.requires]
-webkit2gtk4.1 = "*"
+"webkit2gtk4.1" = "*"
 gtk3 = "*"
