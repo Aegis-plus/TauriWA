@@ -4,56 +4,83 @@
 </p>
 
 ## Features
-* Desktop notifications
-* Calls / Videos calls working (you need to join WhatsApp Web Beta)
-* Tray icon with unread count (aka AppIndicator), [custom tray icons](https://github.com/piec/elecwhat/issues/30#issuecomment-3470456738).
-* Custom keyboard shortcuts ([default](https://github.com/piec/elecwhat/blob/master/src/keys.mjs))
+* Desktop notifications (click one to open the chat)
+* Tray icon with unread count (aka AppIndicator / StatusNotifierItem), [custom tray icons](https://github.com/piec/elecwhat/issues/30#issuecomment-3470456738).
+* Custom keyboard shortcuts ([default](src/keys.rs))
 * Custom CSS
 * Spellcheck
 * CLI & D-Bus interface to show/hide/toggle window
 * Dock unread count badge
-* Very stable, I have been running it for 1+ year without crash/freeze
+* Small and light: a single ~5 MB native binary written in Rust, using the system WebKitGTK (no bundled browser)
 * Can be trusted:
-  * Code easy to review - ~1200 lines of code currently in src*
+  * Code easy to review
   * Automatically built by GitHub Actions (CI)
-* Preserve window position
+* Preserve window position and zoom level
 * Custom user scripts in `~/.config/elecwhat/user-scripts/*.js`
 * Custom tray icons in `~/.config/elecwhat/user-icons/*.png` by default
 * Supports Wayland or X11
 
 ## Why?
 I created this client after due to recurrent stability issues with other linux clients.
-Also I just wanted a simple and stable client and thought it could be done without much code with electron.
+Also I just wanted a simple and stable client.
+
+ElecWhat started as an Electron app; it is now written in Rust with
+[tao](https://github.com/tauri-apps/tao) + [wry](https://github.com/tauri-apps/wry) (WebKitGTK),
+[ksni](https://github.com/iovxw/ksni) for the tray icon and [zbus](https://github.com/dbus2/zbus) for D-Bus.
 
 ## Install
 
-### Ubuntu/Kubuntu:
-* [Snap](https://snapcraft.io/elecwhat)
-* **or** [Buildkite deb] with `--no-sandbox` because of [issue]
-* **or** .deb file in [Releases] with `--no-sandbox` because of [issue]
-* **or** AppImage in [Releases] with `--no-sandbox` because of [issue]
+### From the releases
+* .deb, .rpm or .tar.xz in [Releases]
+* **or** [Buildkite deb] / [Buildkite rpm]
 
-### Arch Linux:
-* [AUR package]: `yay -S elecwhat-bin`
-* **or** Pacman package in [Releases]
-* **or** AppImage in [Releases]
+### From source
+Dependencies: Rust (stable), WebKitGTK 4.1 and GTK 3 development files, git-lfs (icons).
 
-### Debian:
-* [Buildkite deb]
-* **or** .deb file in [Releases]
-* **or** AppImage in [Releases]
+```bash
+sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev   # Debian/Ubuntu
+sudo dnf install webkit2gtk4.1-devel gtk3-devel        # Fedora
+sudo pacman -S webkit2gtk-4.1 gtk3                     # Arch
+```
 
-### Fedora:
-* [Buildkite rpm]
-* **or** rpm file in [Releases]
-* **or** AppImage in [Releases]
+```bash
+git lfs pull
+cargo build --release
+```
+
+Then copy `target/release/elecwhat` to your `PATH`, `packaging/elecwhat.desktop` to
+`~/.local/share/applications/` and `static/app-512.png` to
+`~/.local/share/icons/hicolor/512x512/apps/elecwhat.png`.
+Or build a package with [cargo-deb](https://github.com/kornelski/cargo-deb) (`cargo deb`) or
+[cargo-generate-rpm](https://github.com/cat-in-136/cargo-generate-rpm) (`cargo generate-rpm`).
+
+### Voice/video calls
+Calls depend on WebRTC support in your WebKitGTK version (2.40+ built with WebRTC,
+plus the GStreamer plugins), and on WhatsApp Web accepting it. They may not work
+on every distribution.
+
+## Command line
+
+```
+elecwhat [--show | --hide | --toggle | --quit] [--log-level=LEVEL] [whatsapp://URL]
+```
+
+When ElecWhat is already running, the command is sent to it (single instance through D-Bus).
+
+## D-Bus
+
+Service `fr.carru.elecwhat`, object `/fr/carru/elecwhat`, interface `fr.carru.elecwhat`:
+`Show`, `Hide`, `Visible → b`, `ToggleVisibility → b`, `OpenUrl(s)`, `Activate(s token)`, `Quit`.
+
+```bash
+gdbus call --session --dest fr.carru.elecwhat --object-path /fr/carru/elecwhat --method fr.carru.elecwhat.ToggleVisibility
+```
 
 ## Configuration
 
 
 `~/.config/elecwhat/config.json`:
 
-(or for snap: `~/snap/elecwhat/current/.config/elecwhat/config.json`)
 ```
 {
   "log-level": "info",
@@ -63,9 +90,9 @@ Also I just wanted a simple and stable client and thought it could be done witho
   "show-at-startup": false,
 
   "dbus": true,
-
-  "menu-bar": true,
-  "menu-bar-auto-hide": true,
+  "close-chat-on-hide": true,
+  "register-url-scheme": true,
+  "retry-interval": 15000,
 
   "keys": {
     "C ArrowDown": {
@@ -102,14 +129,30 @@ The naming scheme is based on WhatsApp Web favicon urls:
 * `~/.config/elecwhat/user-icons/f01.png` where fXX.png is the number of unread
 
 
+## Keyboard shortcuts
+Bindings are `"<modifiers> <key>"` (`C`=Ctrl, `S`=Shift, `A`=Alt, `M`=Meta) or just `"<key>"`,
+`key` being a [KeyboardEvent.key](https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values) value.
+Besides WhatsApp's own actions (`{"whatsappAction": "..."}`), `{"action": "IPC", "method": "..."}`
+can call: `windowToggle`, `windowShow`, `windowHide`, `reload`, `quit`, `zoomIn`, `zoomOut`,
+`zoomReset`, `fullscreenToggle`, `devTools`.
+
+The defaults include `Ctrl+R` (reload), `Ctrl+Q` (quit), `Ctrl+=`/`Ctrl+-` (zoom), `F11` (fullscreen)
+and `Ctrl+Shift+I` (developer tools), which used to come from the Electron menu bar.
+
+## Data
+* `~/.config/elecwhat/`: `config.json`, `persistent-state.json` (window position, zoom), `user-scripts/`, `user-icons/`
+* `~/.local/share/elecwhat/webview/`: WhatsApp Web session (cookies, local storage, cache)
+
+Coming from the Electron version, you'll have to link your device again (scan the QR code):
+the browser profile can't be carried over. `config.json` is read as before;
+`menu-bar` and `menu-bar-auto-hide` are no longer used (there is no menu bar, see the keyboard shortcuts).
+
 ## Not planed
 * Multi account
 * Complex features
-* Other OS support, official apps already exist. Porting would probably be easy though thanks to electron.
+* Other OS support, official apps already exist.
 
 [Buildkite deb]: https://buildkite.com/organizations/piec/packages/registries/elecwhat-deb
 [Buildkite rpm]: https://buildkite.com/organizations/piec/packages/registries/elecwhat-rpm
 [Releases]: https://github.com/piec/elecwhat/releases
 [AppIndicator]: https://extensions.gnome.org/extension/615/appindicator-support/
-[issue]: https://github.com/electron/electron/issues/41066
-[AUR package]: https://aur.archlinux.org/packages/elecwhat-bin
