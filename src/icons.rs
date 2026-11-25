@@ -156,11 +156,9 @@ mod tests {
 
     #[test]
     fn decode_app_icon() {
-        // static/*.png are stored with git LFS: skip when only the pointer was checked out
-        if !APP_PNG.starts_with(b"\x89PNG") {
-            return;
+        for png in [APP_PNG, APP_512_PNG] {
+            let icon = RgbaIcon::decode(png).unwrap();
+            assert_eq!(icon.argb.len(), (icon.width * icon.height * 4) as usize);
         }
-        let icon = RgbaIcon::decode(APP_PNG).unwrap();
-        assert_eq!(icon.argb.len(), (icon.width * icon.height * 4) as usize);
     }
 }

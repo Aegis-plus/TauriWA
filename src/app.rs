@@ -828,7 +828,9 @@ fn window_icon() -> Option<Icon> {
 /// Notification servers want an icon path or name
 fn write_app_icon() -> String {
     let file = util::cache_dir().join("app.png");
-    let ok = file.exists()
+    // rewrite it when the bundled icon changed (app update)
+    let up_to_date = std::fs::read(&file).is_ok_and(|bytes| bytes == icons::APP_PNG);
+    let ok = up_to_date
         || (std::fs::create_dir_all(util::cache_dir()).is_ok()
             && std::fs::write(&file, icons::APP_PNG).is_ok());
     if ok {

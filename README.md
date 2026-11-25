@@ -43,7 +43,7 @@ git tag v1.0.0 && git push origin v1.0.0
 ```
 
 ### From source
-Dependencies: Rust (stable), WebKitGTK 4.1 and GTK 3 development files, git-lfs (icons).
+Dependencies: Rust (stable), WebKitGTK 4.1 and GTK 3 development files.
 
 ```bash
 sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev   # Debian/Ubuntu
@@ -52,13 +52,12 @@ sudo pacman -S webkit2gtk-4.1 gtk3                     # Arch
 ```
 
 ```bash
-git lfs pull
 cargo build --release
 ```
 
 Then copy `target/release/tauriwa` to your `PATH`, `packaging/tauriwa.desktop` to
-`~/.local/share/applications/` and `static/app-512.png` to
-`~/.local/share/icons/hicolor/512x512/apps/tauriwa.png`.
+`~/.local/share/applications/` and `packaging/tauriwa.svg` to
+`~/.local/share/icons/hicolor/scalable/apps/tauriwa.svg`.
 Or build a package with [cargo-deb](https://github.com/kornelski/cargo-deb) (`cargo deb`) or
 [cargo-generate-rpm](https://github.com/cat-in-136/cargo-generate-rpm) (`cargo generate-rpm`).
 
