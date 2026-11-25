@@ -4,7 +4,7 @@
 //! or just `"<key>"`, `key` being a KeyboardEvent.key value.
 //! An effect is `{ "whatsappAction": "..." }` (WhatsApp Web's own keyboard commands),
 //! `{ "action": "OPEN_NTH_CHAT", "chatIndex": n }`, `{ "action": "SLEEP", "duration": ms }`,
-//! `{ "action": "IPC", "method": "...", "args": [...] }` (see `elecwhat` in `web/bridge.js`),
+//! `{ "action": "IPC", "method": "...", "args": [...] }` (see `tauriwa` in `web/bridge.js`),
 //! or an array of effects run in order.
 
 use serde_json::{json, Map, Value};
@@ -22,7 +22,7 @@ pub fn default_keys() -> Map<String, Value> {
             { "whatsappAction": "LOCK_SCREEN" }
         ],
 
-        // what the Electron menu bar used to provide
+        // app-level shortcuts (reload, quit, zoom, fullscreen, developer tools)
         "C r": { "action": "IPC", "method": "reload" },
         "C q": { "action": "IPC", "method": "quit" },
         "C =": { "action": "IPC", "method": "zoomIn" },

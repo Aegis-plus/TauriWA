@@ -1,7 +1,7 @@
-//! D-Bus service `fr.carru.elecwhat`:
-//! - single instance: a second `elecwhat` forwards its command line to the first one and exits
+//! D-Bus service `io.github.aegis_plus.tauriwa`:
+//! - single instance: a second `tauriwa` forwards its command line to the first one and exits
 //! - lets other programs show/hide/toggle the window:
-//!   `gdbus call --session --dest fr.carru.elecwhat --object-path /fr/carru/elecwhat --method fr.carru.elecwhat.ToggleVisibility`
+//!   `gdbus call --session --dest io.github.aegis_plus.tauriwa --object-path /io/github/aegis_plus/tauriwa --method io.github.aegis_plus.tauriwa.ToggleVisibility`
 //! - dock unread count badge (Unity launcher API)
 
 use std::collections::HashMap;
@@ -17,15 +17,15 @@ use zbus::zvariant::Value;
 use crate::events::{send, Proxy, UserEvent};
 use crate::util;
 
-pub const SERVICE_NAME: &str = "fr.carru.elecwhat";
-pub const OBJECT_PATH: &str = "/fr/carru/elecwhat";
+pub const SERVICE_NAME: &str = "io.github.aegis_plus.tauriwa";
+pub const OBJECT_PATH: &str = "/io/github/aegis_plus/tauriwa";
 
 struct Service {
     proxy: Proxy,
     visible: Arc<AtomicBool>,
 }
 
-#[interface(name = "fr.carru.elecwhat")]
+#[interface(name = "io.github.aegis_plus.tauriwa")]
 impl Service {
     fn show(&self) {
         send(
@@ -70,7 +70,7 @@ impl Service {
 pub enum Instance {
     /// We own the name (or D-Bus is disabled/unavailable): run the app
     Primary,
-    /// Another elecwhat is running and got our command line
+    /// Another tauriwa is running and got our command line
     Secondary,
 }
 

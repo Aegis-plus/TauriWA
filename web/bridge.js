@@ -1,18 +1,18 @@
 // Runs at document start in the main frame, before any WhatsApp code.
-// - window.elecwhat: calls into the Rust side (see `handle_ipc` in src/app.rs)
+// - window.tauriwa: calls into the Rust side (see `handle_ipc` in src/app.rs)
 // - window.Notification: replaced to show desktop notifications
 // - favicon changes are reported to update the tray icon and unread badge
 (() => {
-  if (window.elecwhat) return;
+  if (window.tauriwa) return;
 
   // replaced by the Rust side with a JSON object
-  const state = __ELECWHAT_STATE__;
+  const state = __TAURIWA_STATE__;
 
   const post = (method, ...args) => {
     try {
       window.ipc.postMessage(JSON.stringify({ method, args }));
     } catch (err) {
-      console.error("elecwhat ipc", method, err);
+      console.error("tauriwa ipc", method, err);
     }
   };
 
@@ -33,14 +33,14 @@
     fullscreenToggle: () => post("fullscreenToggle"),
     devTools: () => post("devTools"),
   };
-  Object.defineProperty(window, "elecwhat", { value: Object.freeze(api) });
+  Object.defineProperty(window, "tauriwa", { value: Object.freeze(api) });
 
   // --- Notifications ---
   const notifications = new Map();
   const fire = new WeakMap();
   let nextId = 1;
 
-  class ElecwhatNotification extends EventTarget {
+  class TauriwaNotification extends EventTarget {
     static get permission() {
       return "granted";
     }
@@ -83,7 +83,7 @@
         this.dispatchEvent(ev);
       });
       notifications.set(id, this);
-      this._elecwhatId = id;
+      this._tauriwaId = id;
 
       post("notify", {
         id,
@@ -96,7 +96,7 @@
     }
 
     close() {
-      const id = this._elecwhatId;
+      const id = this._tauriwaId;
       if (notifications.delete(id)) {
         post("notifyClose", id);
         fire.get(this)?.("close");
@@ -105,7 +105,7 @@
   }
 
   // called by the Rust side: "click" or "close"
-  Object.defineProperty(window, "__elecwhatNotificationEvent", {
+  Object.defineProperty(window, "__tauriwaNotificationEvent", {
     value: (id, type) => {
       const n = notifications.get(id);
       if (!n) return;
@@ -115,7 +115,7 @@
     },
   });
 
-  window.Notification = ElecwhatNotification;
+  window.Notification = TauriwaNotification;
 
   // --- Favicon (the unread count) ---
   let lastIcon = null;

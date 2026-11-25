@@ -1,4 +1,4 @@
-//! ElecWhat - Simple desktop WhatsApp client for Linux
+//! TauriWA - Simple desktop WhatsApp client for Linux
 
 mod app;
 mod autostart;
@@ -22,9 +22,9 @@ use crate::dbus::{Command, Instance};
 use crate::events::UserEvent;
 
 const USAGE: &str = "\
-Usage: elecwhat [OPTIONS] [whatsapp://URL]
+Usage: tauriwa [OPTIONS] [whatsapp://URL]
 
-Starts ElecWhat, or sends a command to the running instance.
+Starts TauriWA, or sends a command to the running instance.
 
 Options:
   --show               Show the window (default)
@@ -35,7 +35,7 @@ Options:
   -h, --help           Print this help
   -V, --version        Print the version
 
-Configuration: ~/.config/elecwhat/config.json";
+Configuration: ~/.config/tauriwa/config.json";
 
 fn parse_command(args: &[String]) -> Command {
     if let Some(url) = args
@@ -55,7 +55,7 @@ fn parse_command(args: &[String]) -> Command {
     }
 }
 
-/// consola levels of the Electron version, plus the usual names
+/// consola-style level names (as in ElecWhat), plus the usual names
 fn log_level(name: &str) -> log::LevelFilter {
     match name.to_lowercase().as_str() {
         "silent" | "off" => log::LevelFilter::Off,
@@ -92,6 +92,7 @@ fn main() {
         return;
     }
 
+    util::migrate_from_elecwhat();
     let config = JsonConfig::new(util::user_data_dir().join("config.json"));
 
     // CLI option takes priority over config option

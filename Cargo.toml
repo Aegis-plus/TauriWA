@@ -1,12 +1,12 @@
 [package]
-name = "elecwhat"
-version = "2.0.0"
+name = "tauriwa"
+version = "1.0.0"
 edition = "2021"
 rust-version = "1.80"
 description = "Simple desktop WhatsApp client for linux"
-authors = ["Pierre Carru <pierre@carru.fr>"]
-homepage = "https://github.com/piec/elecwhat"
-repository = "https://github.com/piec/elecwhat"
+authors = ["aegis-plus", "Pierre Carru <pierre@carru.fr> (original ElecWhat)"]
+homepage = "https://github.com/aegis-plus/tauriwa"
+repository = "https://github.com/aegis-plus/tauriwa"
 license = "GPL-3.0-or-later"
 readme = "README.md"
 publish = false
@@ -47,19 +47,19 @@ section = "net"
 depends = "$auto"
 extended-description = "Simple and stable desktop WhatsApp Web client for Linux: tray icon with unread count, notifications, keyboard shortcuts, custom CSS and user scripts, D-Bus interface."
 assets = [
-  ["target/release/elecwhat", "usr/bin/", "755"],
-  ["packaging/elecwhat.desktop", "usr/share/applications/", "644"],
-  ["static/app-512.png", "usr/share/icons/hicolor/512x512/apps/elecwhat.png", "644"],
-  ["packaging/fr.carru.elecwhat.metainfo.xml", "usr/share/metainfo/", "644"],
+  ["target/release/tauriwa", "usr/bin/", "755"],
+  ["packaging/tauriwa.desktop", "usr/share/applications/", "644"],
+  ["static/app-512.png", "usr/share/icons/hicolor/512x512/apps/tauriwa.png", "644"],
+  ["packaging/io.github.aegis_plus.tauriwa.metainfo.xml", "usr/share/metainfo/", "644"],
 ]
 
 # `cargo generate-rpm`
 [package.metadata.generate-rpm]
 assets = [
-  { source = "target/release/elecwhat", dest = "/usr/bin/elecwhat", mode = "755" },
-  { source = "packaging/elecwhat.desktop", dest = "/usr/share/applications/elecwhat.desktop", mode = "644" },
-  { source = "static/app-512.png", dest = "/usr/share/icons/hicolor/512x512/apps/elecwhat.png", mode = "644" },
-  { source = "packaging/fr.carru.elecwhat.metainfo.xml", dest = "/usr/share/metainfo/fr.carru.elecwhat.metainfo.xml", mode = "644" },
+  { source = "target/release/tauriwa", dest = "/usr/bin/tauriwa", mode = "755" },
+  { source = "packaging/tauriwa.desktop", dest = "/usr/share/applications/tauriwa.desktop", mode = "644" },
+  { source = "static/app-512.png", dest = "/usr/share/icons/hicolor/512x512/apps/tauriwa.png", mode = "644" },
+  { source = "packaging/io.github.aegis_plus.tauriwa.metainfo.xml", dest = "/usr/share/metainfo/io.github.aegis_plus.tauriwa.metainfo.xml", mode = "644" },
 ]
 [package.metadata.generate-rpm.requires]
 webkit2gtk4.1 = "*"

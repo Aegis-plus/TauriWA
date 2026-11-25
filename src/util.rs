@@ -2,9 +2,9 @@ use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use std::time::Duration;
 
-pub const APP_NAME: &str = "elecwhat";
-pub const PRODUCT_NAME: &str = "ElecWhat";
-pub const DESKTOP_NAME: &str = "elecwhat.desktop";
+pub const APP_NAME: &str = "tauriwa";
+pub const PRODUCT_NAME: &str = "TauriWA";
+pub const DESKTOP_NAME: &str = "tauriwa.desktop";
 pub const URL_SCHEME: &str = "whatsapp";
 pub const DEFAULT_URL: &str = "https://web.whatsapp.com/";
 pub const DEFAULT_USER_AGENT: &str =
@@ -84,7 +84,7 @@ pub fn home_dir() -> PathBuf {
     dirs::home_dir().unwrap_or_else(|| PathBuf::from("/"))
 }
 
-/// `~/.config/elecwhat`: config.json, persistent-state.json, user-scripts/, user-icons/
+/// `~/.config/tauriwa`: config.json, persistent-state.json, user-scripts/, user-icons/
 pub fn user_data_dir() -> &'static Path {
     static DIR: OnceLock<PathBuf> = OnceLock::new();
     DIR.get_or_init(|| {
@@ -94,7 +94,7 @@ pub fn user_data_dir() -> &'static Path {
     })
 }
 
-/// `~/.local/share/elecwhat/webview`: cookies, local storage, IndexedDB, http cache of the webview
+/// `~/.local/share/tauriwa/webview`: cookies, local storage, IndexedDB, http cache of the webview
 pub fn webview_data_dir() -> PathBuf {
     dirs::data_dir()
         .unwrap_or_else(|| home_dir().join(".local/share"))
@@ -102,11 +102,50 @@ pub fn webview_data_dir() -> PathBuf {
         .join("webview")
 }
 
-/// `~/.cache/elecwhat`
+/// `~/.cache/tauriwa`
 pub fn cache_dir() -> PathBuf {
     dirs::cache_dir()
         .unwrap_or_else(|| home_dir().join(".cache"))
         .join(APP_NAME)
+}
+
+/// First run: copy the settings of ElecWhat (`~/.config/elecwhat`), the app TauriWA was ported from.
+/// The WhatsApp session itself can't be carried over (different browser engine).
+pub fn migrate_from_elecwhat() {
+    let new_dir = user_data_dir();
+    let old_dir = new_dir.with_file_name("elecwhat");
+    if new_dir.exists() || !old_dir.join("config.json").exists() {
+        return;
+    }
+    let result = std::fs::create_dir_all(new_dir).and_then(|_| {
+        for name in ["config.json", "user-scripts", "user-icons"] {
+            let from = old_dir.join(name);
+            if from.exists() {
+                copy_recursive(&from, &new_dir.join(name))?;
+            }
+        }
+        Ok(())
+    });
+    match result {
+        Ok(()) => eprintln!("tauriwa: imported settings from {}", old_dir.display()),
+        Err(err) => eprintln!(
+            "tauriwa: cannot import settings from {}: {err}",
+            old_dir.display()
+        ),
+    }
+}
+
+fn copy_recursive(from: &Path, to: &Path) -> std::io::Result<()> {
+    if from.is_dir() {
+        std::fs::create_dir_all(to)?;
+        for entry in std::fs::read_dir(from)? {
+            let entry = entry?;
+            copy_recursive(&entry.path(), &to.join(entry.file_name()))?;
+        }
+        Ok(())
+    } else {
+        std::fs::copy(from, to).map(|_| ())
+    }
 }
 
 pub fn replace_variables(s: &str) -> String {
@@ -145,7 +184,7 @@ pub fn desktop_file_id() -> String {
         return format!("{id}.desktop");
     }
     if is_snap() {
-        return "elecwhat_elecwhat.desktop".to_owned();
+        return "tauriwa_tauriwa.desktop".to_owned();
     }
     DESKTOP_NAME.to_owned()
 }

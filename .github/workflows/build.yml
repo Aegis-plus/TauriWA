@@ -1,62 +1,83 @@
-name: Build/release
+name: Build
+
+# Every push and pull request: lint, test, and build the Linux packages
+# (downloadable from the run's "Artifacts").
+# Pushing a tag like v1.0.0 also publishes them as a GitHub release.
 
 on:
   push:
-    tags:
-      - '*'
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  release:
-    permissions:
-      contents: write
-
+  check:
     runs-on: ubuntu-24.04
-
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           lfs: true
 
-      - run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets --locked -- -D warnings
+      - run: cargo test --locked
+
+  package:
+    needs: check
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev
 
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
 
-      - run: cargo install --locked cargo-deb cargo-generate-rpm
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deb,cargo-generate-rpm
 
       - run: cargo build --release --locked
 
       - name: Packages
         run: |
+          version=$(cargo pkgid | sed 's/.*[#@]//')
           mkdir -p dist
           cargo deb --no-build --output dist/
           cargo generate-rpm --output dist/
-          name="elecwhat-${GITHUB_REF_NAME}-linux-x86_64"
+          name="tauriwa-${version}-linux-x86_64"
           mkdir -p "$name"
-          cp target/release/elecwhat packaging/elecwhat.desktop static/app-512.png README.md LICENSE "$name/"
+          cp target/release/tauriwa packaging/tauriwa.desktop static/app-512.png README.md LICENSE "$name/"
           tar -cJf "dist/$name.tar.xz" "$name"
+          cd dist && sha256sum * | tee SHA256SUMS
 
-      - name: Print SHA256 digests of built files
-        run: find ./dist -maxdepth 1 -type f | sort | xargs sha256sum
-
-      - uses: softprops/action-gh-release@v2
+      - uses: actions/upload-artifact@v4
         with:
-          draft: true
+          name: tauriwa-linux-x86_64
+          path: dist/*
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
           files: dist/*
-
-      - env:
-          BUILDKITE_TOKEN: ${{ secrets.BUILDKITE_TOKEN }}
-        run: |
-          for f in ./dist/*.deb; do
-            curl -s -X POST https://api.buildkite.com/v2/packages/organizations/piec/registries/elecwhat-deb/packages \
-              -H "Authorization: Bearer $BUILDKITE_TOKEN" \
-              -F "file=@$f"
-          done
-
-          for f in ./dist/*.rpm; do
-            curl -s -X POST https://api.buildkite.com/v2/packages/organizations/piec/registries/elecwhat-rpm/packages \
-              -H "Authorization: Bearer $BUILDKITE_TOKEN" \
-              -F "file=@$f"
-          done
+          generate_release_notes: true

@@ -12,8 +12,8 @@ use std::path::{Path, PathBuf};
 
 use crate::util::{self, DESKTOP_NAME};
 
-/// Same entry as packaging/elecwhat.desktop, without the Exec field codes
-pub const DESKTOP_ENTRY: &str = include_str!("../packaging/elecwhat.desktop");
+/// Same entry as packaging/tauriwa.desktop, without the Exec field codes
+pub const DESKTOP_ENTRY: &str = include_str!("../packaging/tauriwa.desktop");
 
 pub fn supported() -> bool {
     !util::is_snap() && util::flatpak_id().is_none()
@@ -141,7 +141,7 @@ fn strip_field_codes(line: &str) -> String {
 fn entry_content() -> String {
     // Use an installed entry only when it can point to this very copy:
     // - an AppImage's path changes on update, an installed entry may point to another copy
-    // - in dev, the installed entry would launch the system elecwhat, not this build
+    // - in dev, the installed entry would launch the system tauriwa, not this build
     let source = if util::appimage().is_some() {
         log::info!("autostart: AppImage, not looking for an installed desktop file");
         None
@@ -217,7 +217,7 @@ mod tests {
 
     #[test]
     fn quoting() {
-        assert_eq!(quote_exec_arg("/usr/bin/elecwhat"), "/usr/bin/elecwhat");
+        assert_eq!(quote_exec_arg("/usr/bin/tauriwa"), "/usr/bin/tauriwa");
         assert_eq!(
             quote_exec_arg("/home/a b/x.AppImage"),
             "\"/home/a b/x.AppImage\""
@@ -229,10 +229,10 @@ mod tests {
     #[test]
     fn entry() {
         let e = autostart_entry(
-            "[Desktop Entry]\nName=ElecWhat\nExec=elecwhat %U\nHidden=true\n[Other]\nExec=x %U\n",
+            "[Desktop Entry]\nName=TauriWA\nExec=tauriwa %U\nHidden=true\n[Other]\nExec=x %U\n",
             None,
         );
-        assert_eq!(e, "[Desktop Entry]\nX-GNOME-Autostart-enabled=true\nName=ElecWhat\nExec=elecwhat\n[Other]\nExec=x %U\n");
+        assert_eq!(e, "[Desktop Entry]\nX-GNOME-Autostart-enabled=true\nName=TauriWA\nExec=tauriwa\n[Other]\nExec=x %U\n");
         let g = autostart_entry(DESKTOP_ENTRY, Some("/opt/x"));
         assert!(g.contains("\nExec=/opt/x\n"), "{g}");
     }

@@ -2,7 +2,7 @@
 //!
 //! Values are read once at startup. `set` edits the original text in place so
 //! that the user's comments and formatting survive (same behaviour as the
-//! `jsonc-parser` `modify` used by the Electron version).
+//! `jsonc-parser` `modify` used by ElecWhat).
 
 use std::path::{Path, PathBuf};
 
@@ -165,7 +165,7 @@ mod tests {
     use serde_json::json;
 
     fn temp_file(name: &str, content: Option<&str>) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("elecwhat-test-{}-{name}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("tauriwa-test-{}-{name}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let file = dir.join("config.json");
         let _ = std::fs::remove_file(&file);

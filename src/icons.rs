@@ -1,5 +1,5 @@
 //! Tray icons: WhatsApp Web's favicon (it shows the unread count), or the
-//! user's own icons from `~/.config/elecwhat/user-icons/<name>.png`.
+//! user's own icons from `~/.config/tauriwa/user-icons/<name>.png`.
 
 use std::collections::HashMap;
 use std::path::Path;

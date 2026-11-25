@@ -7,7 +7,7 @@ function ewHijackClick() {
     if (!(a instanceof HTMLAnchorElement)) return;
     if (a.getAttribute("target") === "_blank" && a.href) {
       ev.preventDefault();
-      window?.elecwhat?.open?.(a.href);
+      window?.tauriwa?.open?.(a.href);
     }
   });
 }
@@ -22,7 +22,7 @@ function ewDoWhatsappAction(whatsappAction) {
 }
 
 async function ewSetupKeys() {
-  const keys = (await window?.elecwhat?.stateGet("keys")) ?? {};
+  const keys = (await window?.tauriwa?.stateGet("keys")) ?? {};
   const kMap = await navigator.keyboard?.getLayoutMap?.();
 
   const parsedCache = {};
@@ -58,7 +58,7 @@ async function ewSetupKeys() {
     await {
       OPEN_NTH_CHAT: (effect) => openNthChat(effect.chatIndex),
       SLEEP: async (effect) => new Promise((resolve) => setTimeout(resolve, effect.duration)),
-      IPC: async (effect) => window?.elecwhat?.[effect.method]?.(...(effect.args ?? [])),
+      IPC: async (effect) => window?.tauriwa?.[effect.method]?.(...(effect.args ?? [])),
     }[effect.action]?.(effect);
   }
 
@@ -121,7 +121,7 @@ async function ewSetup() {
 
   await ewSetupKeys();
 
-  if (await window?.elecwhat?.stateGet("escToggle")) {
+  if (await window?.tauriwa?.stateGet("escToggle")) {
     addEventListener(
       "keydown",
       (ev) => {
@@ -131,7 +131,7 @@ async function ewSetup() {
             ev.preventDefault();
             ev.stopPropagation();
             console.log("esc: toggle window");
-            window?.elecwhat?.windowToggle?.();
+            window?.tauriwa?.windowToggle?.();
           }
         }
       },

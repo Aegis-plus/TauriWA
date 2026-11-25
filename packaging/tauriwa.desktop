@@ -1,12 +1,12 @@
 [Desktop Entry]
-Name=ElecWhat
+Name=TauriWA
 GenericName=WhatsApp Client
 Comment=Simple desktop WhatsApp client for linux
-Exec=elecwhat %U
+Exec=tauriwa %U
 Terminal=false
 Type=Application
-Icon=elecwhat
-StartupWMClass=elecwhat
+Icon=tauriwa
+StartupWMClass=tauriwa
 SingleMainWindow=true
 MimeType=x-scheme-handler/whatsapp;
 Categories=Network;Chat;InstantMessaging;X-WhatsApp;

@@ -123,10 +123,8 @@ impl App {
         };
         let url: String = config.get("url", util::DEFAULT_URL.to_owned());
 
-        let bridge = BRIDGE_JS.replace(
-            "__ELECWHAT_STATE__",
-            &page_state(&config, debug).to_string(),
-        );
+        let bridge =
+            BRIDGE_JS.replace("__TAURIWA_STATE__", &page_state(&config, debug).to_string());
 
         let webview = {
             let p_ipc = proxy.clone();
@@ -391,13 +389,13 @@ impl App {
                 self.show_window(activation_token);
                 if let Some(id) = js_id {
                     self.eval(&format!(
-                        "window.__elecwhatNotificationEvent?.({id}, 'click')"
+                        "window.__tauriwaNotificationEvent?.({id}, 'click')"
                     ));
                 }
             }
             UserEvent::NotificationClosed { js_id } => {
                 self.eval(&format!(
-                    "window.__elecwhatNotificationEvent?.({js_id}, 'close')"
+                    "window.__tauriwaNotificationEvent?.({js_id}, 'close')"
                 ));
             }
             UserEvent::Favicon { url, icon } => {
@@ -746,7 +744,10 @@ impl App {
             .program_name(util::PRODUCT_NAME)
             .version(util::version_info())
             .comments(env!("CARGO_PKG_DESCRIPTION"))
-            .authors(vec!["Pierre Carru".to_owned()])
+            .authors(vec![
+                "aegis-plus".to_owned(),
+                "Pierre Carru (original ElecWhat)".to_owned(),
+            ])
             .website(env!("CARGO_PKG_HOMEPAGE"))
             .license_type(gtk::License::Gpl30)
             .transient_for(self.window.gtk_window())
@@ -764,7 +765,7 @@ impl App {
     }
 }
 
-/// State read by the page through `elecwhat.stateGet(name)`
+/// State read by the page through `tauriwa.stateGet(name)`
 fn page_state(config: &JsonConfig, debug: bool) -> Value {
     json!({
         "debug": debug,
