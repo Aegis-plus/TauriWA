@@ -1,8 +1,3 @@
-node_modules/
-
-/out/
+/target/
 /dist*/
-/_rm/
-/.flatpak-builder/
-
 .idea/

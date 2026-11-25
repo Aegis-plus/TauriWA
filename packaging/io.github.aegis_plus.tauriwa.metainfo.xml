@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.aegis_plus.tauriwa</id>
+  <name>TauriWA</name>
+  <summary>Simple desktop WhatsApp client for linux</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <launchable type="desktop-id">tauriwa.desktop</launchable>
+  <url type="homepage">https://github.com/Aegis-plus/TauriWA</url>
+  <description>
+    <p>
+      A small and stable WhatsApp Web client: tray icon with unread count,
+      desktop notifications, keyboard shortcuts, custom CSS and user scripts,
+      D-Bus interface to show/hide the window.
+    </p>
+  </description>
+  <categories>
+    <category>Network</category>
+    <category>Chat</category>
+  </categories>
+</component>

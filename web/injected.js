@@ -1,37 +1,20 @@
+// Run once the page has loaded (after web/bridge.js)
 console.log("injected.js");
-
-function ewHijackNotif(prefix) {
-  window.realNotification = window.Notification;
-
-  const override = {
-    construct(target, args) {
-      args[0] = `${prefix}${args[0]}`;
-      const thing = new target(...args);
-      thing.addEventListener("click", (ev) => {
-        console.log("ev", ev);
-        window?.ipc?.notifyEv?.(JSON.stringify(ev));
-      });
-
-      return thing;
-    },
-  };
-
-  window.Notification = new Proxy(window.realNotification, override);
-}
 
 function ewHijackClick() {
   document.body.addEventListener("click", (ev) => {
-    if (!(ev.target instanceof HTMLAnchorElement)) return;
-    if (ev.target.tagName === "A" && ev.target.getAttribute("target") === "_blank") {
+    const a = ev.target instanceof Element ? ev.target.closest("a") : null;
+    if (!(a instanceof HTMLAnchorElement)) return;
+    if (a.getAttribute("target") === "_blank" && a.href) {
       ev.preventDefault();
-      window?.ipc?.open?.(ev.target.href);
+      window?.tauriwa?.open?.(a.href);
     }
   });
 }
 
 function ewDoWhatsappAction(whatsappAction) {
   if (ewDoWhatsappAction.wa == null) {
-    if (importDefault) {
+    if (typeof importDefault === "function") {
       ewDoWhatsappAction.wa = importDefault("WAWebKeyboardRun");
     }
   }
@@ -39,7 +22,7 @@ function ewDoWhatsappAction(whatsappAction) {
 }
 
 async function ewSetupKeys() {
-  const keys = await window?.ipc?.stateGet("keys");
+  const keys = (await window?.tauriwa?.stateGet("keys")) ?? {};
   const kMap = await navigator.keyboard?.getLayoutMap?.();
 
   const parsedCache = {};
@@ -47,7 +30,10 @@ async function ewSetupKeys() {
     if (binding in parsedCache) {
       return parsedCache[binding];
     }
-    const [modifiers, key] = binding.split(" ");
+    // "C ArrowDown", or just "F11"
+    const space = binding.indexOf(" ");
+    const modifiers = space >= 0 ? binding.slice(0, space) : "";
+    const key = space >= 0 ? binding.slice(space + 1) : binding;
     let mapped;
     // if key is digit, use correct key for other keyboard layouts (like azerty)
     if (kMap && key.length == 1 && key >= "0" && key <= "9") {
@@ -72,7 +58,7 @@ async function ewSetupKeys() {
     await {
       OPEN_NTH_CHAT: (effect) => openNthChat(effect.chatIndex),
       SLEEP: async (effect) => new Promise((resolve) => setTimeout(resolve, effect.duration)),
-      IPC: async (effect) => window?.ipc?.[effect.method]?.(...(effect.args ?? [])),
+      IPC: async (effect) => window?.tauriwa?.[effect.method]?.(...(effect.args ?? [])),
     }[effect.action]?.(effect);
   }
 
@@ -128,15 +114,14 @@ async function ewSetupKeys() {
 }
 
 async function ewSetup() {
+  if (window.ewSetupDone) return;
+  window.ewSetupDone = true;
   console.log("ewSetup");
   ewHijackClick();
 
-  const prefix = await window?.ipc?.stateGet?.("notifPrefix");
-  ewHijackNotif(prefix);
-
   await ewSetupKeys();
 
-  if (await window?.ipc?.stateGet("escToggle")) {
+  if (await window?.tauriwa?.stateGet("escToggle")) {
     addEventListener(
       "keydown",
       (ev) => {
@@ -146,7 +131,7 @@ async function ewSetup() {
             ev.preventDefault();
             ev.stopPropagation();
             console.log("esc: toggle window");
-            window?.ipc?.windowToggle?.();
+            window?.tauriwa?.windowToggle?.();
           }
         }
       },
