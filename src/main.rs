@@ -12,14 +12,8 @@ mod notify;
 mod tray;
 mod util;
 
-use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
-
-use tao::event_loop::EventLoopBuilder;
-
 use crate::config::JsonConfig;
-use crate::dbus::{Command, Instance};
-use crate::events::UserEvent;
+use crate::dbus::Command;
 
 const USAGE: &str = "\
 Usage: tauriwa [OPTIONS] [whatsapp://URL]
@@ -82,6 +76,19 @@ fn init_logger(level: log::LevelFilter) {
 }
 
 fn main() {
+    // CEF runs its helper processes (renderer, GPU, network...) from this
+    // same binary: hand them over to CEF before anything else.
+    let _ = cef::api_hash(cef::sys::CEF_API_VERSION_LAST, 0);
+    let cef_args = cef::args::Args::new();
+    let code = cef::execute_process(
+        Some(cef_args.as_main_args()),
+        None::<&mut cef::App>,
+        std::ptr::null_mut(),
+    );
+    if code >= 0 {
+        std::process::exit(code);
+    }
+
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.iter().any(|a| a == "-h" || a == "--help") {
         println!("{USAGE}");
@@ -100,7 +107,8 @@ fn main() {
         .iter()
         .find_map(|a| a.strip_prefix("--log-level=").map(str::to_owned));
     let level = cli_level.unwrap_or_else(|| config.get("log-level", "info".to_owned()));
-    init_logger(log_level(&level));
+    let level = log_level(&level);
+    init_logger(level);
 
     log::info!("{} {}", util::APP_NAME, util::version_info());
     log::info!("config file {}", config.file().display());
@@ -112,7 +120,7 @@ fn main() {
     let use_dbus = config.get("dbus", true);
     let bus = dbus::session_bus();
 
-    // already running? hand over the command line before initializing GTK
+    // already running? hand over the command line before starting Chromium
     if use_dbus {
         if let Some(conn) = &bus {
             if dbus::is_running(conn) {
@@ -122,35 +130,53 @@ fn main() {
         }
     }
 
-    // app_id on Wayland, WM_CLASS on X11: matches StartupWMClass of the .desktop file
-    glib::set_prgname(Some(util::APP_NAME));
-    glib::set_application_name(util::PRODUCT_NAME);
-
-    let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
-    let visible = Arc::new(AtomicBool::new(false));
-
-    if use_dbus {
-        if let Some(conn) = &bus {
-            if let Instance::Secondary =
-                dbus::register(conn, event_loop.create_proxy(), visible.clone(), &command)
-            {
-                return;
-            }
-        }
+    let profile = util::webview_data_dir();
+    if let Err(err) = std::fs::create_dir_all(&profile) {
+        log::error!("cannot create {}: {err}", profile.display());
     }
-
-    let mut app = match app::App::new(&event_loop, config, bus, visible, &command) {
-        Ok(app) => app,
-        Err(err) => {
-            log::error!("{err}");
-            std::process::exit(1);
-        }
+    log::info!("browser profile {}", profile.display());
+    let spell_langs: Vec<String> = config.get("spellcheck-languages", i18n::preferred_languages());
+    log::debug!("spellLangs {spell_langs:?}");
+    util::set_spellcheck_preferences(&profile, config.get("spellcheck", true), &spell_langs);
+    let profile = cef::CefString::from(profile.to_string_lossy().as_ref());
+    let user_agent: Option<String> = config.get("user-agent", None);
+    let settings = cef::Settings {
+        // Chromium's sandbox needs a setuid helper or unprivileged user
+        // namespaces, which some distributions (Ubuntu 24.04) restrict
+        no_sandbox: 1,
+        root_cache_path: profile.clone(),
+        cache_path: profile,
+        persist_session_cookies: 1,
+        user_agent: cef::CefString::from(user_agent.as_deref().unwrap_or("")),
+        log_severity: match level {
+            log::LevelFilter::Trace | log::LevelFilter::Debug => cef::LogSeverity::INFO,
+            log::LevelFilter::Off => cef::LogSeverity::DISABLE,
+            _ => cef::LogSeverity::ERROR,
+        },
+        ..Default::default()
     };
-    if !app.check_config() {
-        return;
-    }
 
-    event_loop.run(move |event, _target, control_flow| app.handle(event, control_flow));
+    *app::STARTUP.lock().unwrap() = Some(app::Startup {
+        config,
+        bus,
+        use_dbus,
+        command,
+    });
+
+    let mut cef_app = app::TauriwaApp::new();
+    if cef::initialize(
+        Some(cef_args.as_main_args()),
+        Some(&settings),
+        Some(&mut cef_app),
+        std::ptr::null_mut(),
+    ) != 1
+    {
+        log::error!("cannot initialize Chromium (CEF)");
+        std::process::exit(1);
+    }
+    // app::start() runs once the browser context is ready
+    cef::run_message_loop();
+    cef::shutdown();
 }
 
 #[cfg(test)]

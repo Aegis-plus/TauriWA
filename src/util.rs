@@ -7,8 +7,24 @@ pub const PRODUCT_NAME: &str = "TauriWA";
 pub const DESKTOP_NAME: &str = "tauriwa.desktop";
 pub const URL_SCHEME: &str = "whatsapp";
 pub const DEFAULT_URL: &str = "https://web.whatsapp.com/";
-pub const DEFAULT_USER_AGENT: &str =
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36";
+
+/// "156.0.8078.100", the version of the bundled Chromium
+pub fn chromium_version() -> &'static str {
+    // b"156.0.31+ge603d97+chromium-156.0.8078.100\0"
+    let cef = std::str::from_utf8(cef::sys::CEF_VERSION).unwrap_or("");
+    cef.trim_end_matches('\0')
+        .rsplit("chromium-")
+        .next()
+        .unwrap_or("")
+}
+
+/// The user agent of the Chrome release matching the bundled Chromium
+pub fn chrome_user_agent() -> String {
+    format!(
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{}.0.0.0 Safari/537.36",
+        cef::sys::CHROME_VERSION_MAJOR
+    )
+}
 
 fn env(name: &str) -> Option<String> {
     std::env::var(name).ok().filter(|v| !v.is_empty())
@@ -68,11 +84,7 @@ pub fn session_type() -> Option<String> {
 
 /// "2.0.0 (webkitgtk 2.48.1, wayland, packaged)"
 pub fn version_info() -> String {
-    let webkit = match wry::webview_version() {
-        Ok(v) => format!("webkitgtk {v}"),
-        Err(_) => "webkitgtk".to_owned(),
-    };
-    let mut details = vec![webkit];
+    let mut details = vec![format!("chromium {}", chromium_version())];
     if let Some(session) = session_type() {
         details.push(session);
     }
@@ -94,12 +106,85 @@ pub fn user_data_dir() -> &'static Path {
     })
 }
 
-/// `~/.local/share/tauriwa/webview`: cookies, local storage, IndexedDB, http cache of the webview
+/// `~/.local/share/tauriwa/chromium`: the Chromium profile (cookies, local
+/// storage, IndexedDB, caches)
 pub fn webview_data_dir() -> PathBuf {
     dirs::data_dir()
         .unwrap_or_else(|| home_dir().join(".local/share"))
         .join(APP_NAME)
-        .join("webview")
+        .join("chromium")
+}
+
+/// Chromium's spellchecker settings, written to the profile's Preferences
+/// file before Chromium starts (it reads it at launch). Chromium downloads
+/// the dictionaries itself on first use.
+pub fn set_spellcheck_preferences(profile: &Path, enabled: bool, languages: &[String]) {
+    let file = profile.join("Default").join("Preferences");
+    let mut prefs: serde_json::Value = std::fs::read_to_string(&file)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .filter(serde_json::Value::is_object)
+        .unwrap_or_else(|| serde_json::json!({}));
+    let before = prefs.clone();
+    fn object<'a>(
+        v: &'a mut serde_json::Value,
+        key: &str,
+    ) -> &'a mut serde_json::Map<String, serde_json::Value> {
+        let entry = v
+            .as_object_mut()
+            .expect("object")
+            .entry(key)
+            .or_insert_with(|| serde_json::json!({}));
+        if !entry.is_object() {
+            *entry = serde_json::json!({});
+        }
+        entry.as_object_mut().expect("object")
+    }
+    object(&mut prefs, "browser").insert(
+        "enable_spellchecking".to_owned(),
+        serde_json::Value::Bool(enabled),
+    );
+    if enabled {
+        object(&mut prefs, "spellcheck")
+            .insert("dictionaries".to_owned(), serde_json::json!(languages));
+    }
+    if prefs == before {
+        return;
+    }
+    let written = file
+        .parent()
+        .map(std::fs::create_dir_all)
+        .unwrap_or(Ok(()))
+        .and_then(|_| std::fs::write(&file, prefs.to_string()));
+    if let Err(err) = written {
+        log::warn!("spellcheck: {}: {err}", file.display());
+    }
+}
+
+pub fn downloads_dir() -> PathBuf {
+    dirs::download_dir().unwrap_or_else(home_dir)
+}
+
+/// `dir/name`, or `dir/name (1).ext`... when it already exists
+pub fn unique_path(dir: &Path, name: &str) -> PathBuf {
+    // no directories in a name chosen by a web page
+    let name = Path::new(name)
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .filter(|n| n != "." && n != "..")
+        .unwrap_or_else(|| "download".to_owned());
+    let first = dir.join(&name);
+    if !first.exists() {
+        return first;
+    }
+    let (stem, ext) = match name.rsplit_once('.') {
+        Some((stem, ext)) if !stem.is_empty() => (stem.to_owned(), format!(".{ext}")),
+        _ => (name.clone(), String::new()),
+    };
+    (1..)
+        .map(|i| dir.join(format!("{stem} ({i}){ext}")))
+        .find(|p| !p.exists())
+        .expect("unbounded")
 }
 
 /// `~/.cache/tauriwa`
@@ -370,6 +455,51 @@ mod tests {
         assert_eq!(url.path(), "/mysheet.css");
         // raw css is not a URL
         assert!(url::Url::parse("span { font-size: small !important; }").is_err());
+    }
+
+    #[test]
+    fn spellcheck_preferences() {
+        let dir = std::env::temp_dir().join(format!("tauriwa-prefs-{}", std::process::id()));
+        let file = dir.join("Default/Preferences");
+        std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+        std::fs::write(
+            &file,
+            r#"{"browser":{"other":1},"spellcheck":"broken","keep":true}"#,
+        )
+        .unwrap();
+        set_spellcheck_preferences(&dir, true, &["fr".to_owned(), "en-US".to_owned()]);
+        let prefs: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&file).unwrap()).unwrap();
+        assert_eq!(prefs["browser"]["enable_spellchecking"], true);
+        assert_eq!(prefs["browser"]["other"], 1);
+        assert_eq!(
+            prefs["spellcheck"]["dictionaries"],
+            serde_json::json!(["fr", "en-US"])
+        );
+        assert_eq!(prefs["keep"], true);
+        set_spellcheck_preferences(&dir, false, &[]);
+        let prefs: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&file).unwrap()).unwrap();
+        assert_eq!(prefs["browser"]["enable_spellchecking"], false);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn unique_paths() {
+        let dir = std::env::temp_dir().join(format!("tauriwa-unique-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        assert_eq!(unique_path(&dir, "a.jpg"), dir.join("a.jpg"));
+        std::fs::write(dir.join("a.jpg"), "").unwrap();
+        assert_eq!(unique_path(&dir, "a.jpg"), dir.join("a (1).jpg"));
+        assert_eq!(unique_path(&dir, "../../etc/passwd"), dir.join("passwd"));
+        assert_eq!(unique_path(&dir, ".."), dir.join("download"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn chromium() {
+        assert!(chromium_version().starts_with(&cef::sys::CHROME_VERSION_MAJOR.to_string()));
+        assert!(chrome_user_agent().contains("Chrome/"));
     }
 
     #[test]

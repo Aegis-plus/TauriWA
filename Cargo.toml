@@ -12,13 +12,10 @@ readme = "README.md"
 publish = false
 
 [dependencies]
-# window + event loop (GTK on Linux) and the WebKitGTK webview
-tao = "0.37"
-wry = { version = "0.57", default-features = false, features = ["os-webview", "x11", "devtools"] }
-# direct access to the webkit/gtk objects wry builds on (versions must match wry's)
-webkit2gtk = { version = "=2.0.2", features = ["v2_40"] }
-gtk = "0.18"
-glib = "0.18"
+# Chromium (CEF): window, browser and message loop
+cef = { version = "=156.7.0", default-features = false }
+# only to get the path of the downloaded CEF distribution in build.rs (DEP_CEF_DLL_WRAPPER_CEF_DIR)
+cef-dll-sys = "=156.7.0"
 
 # tray icon (StatusNotifierItem) and D-Bus
 ksni = { version = "0.3", default-features = false, features = ["blocking", "async-io"] }
@@ -46,25 +43,42 @@ opt-level = "s"
 resvg = { version = "0.45", default-features = false }
 
 # `cargo deb`
+# `packaging/bundle-cef.sh` then `cargo deb --no-build`
 [package.metadata.deb]
 section = "net"
-depends = "$auto"
-extended-description = "Simple and stable desktop WhatsApp Web client for Linux: tray icon with unread count, notifications, keyboard shortcuts, custom CSS and user scripts, D-Bus interface."
+depends = "$auto, xdg-utils"
+extended-description = "Simple and stable desktop WhatsApp Web client for Linux, running WhatsApp Web in Chromium (CEF): tray icon with unread count, notifications, keyboard shortcuts, custom CSS and user scripts, D-Bus interface."
 assets = [
-  ["target/release/tauriwa", "usr/bin/", "755"],
+  ["packaging/tauriwa.sh", "usr/bin/tauriwa", "755"],
+  ["target/bundle/tauriwa/tauriwa", "usr/lib/tauriwa/", "755"],
+  ["target/bundle/tauriwa/*.so", "usr/lib/tauriwa/", "644"],
+  ["target/bundle/tauriwa/*.so.1", "usr/lib/tauriwa/", "644"],
+  ["target/bundle/tauriwa/*.pak", "usr/lib/tauriwa/", "644"],
+  ["target/bundle/tauriwa/*.dat", "usr/lib/tauriwa/", "644"],
+  ["target/bundle/tauriwa/*.bin", "usr/lib/tauriwa/", "644"],
+  ["target/bundle/tauriwa/*.json", "usr/lib/tauriwa/", "644"],
+  ["target/bundle/tauriwa/locales/*", "usr/lib/tauriwa/locales/", "644"],
   ["packaging/tauriwa.desktop", "usr/share/applications/", "644"],
   ["packaging/tauriwa.svg", "usr/share/icons/hicolor/scalable/apps/tauriwa.svg", "644"],
   ["packaging/io.github.aegis_plus.tauriwa.metainfo.xml", "usr/share/metainfo/", "644"],
 ]
 
-# `cargo generate-rpm`
+# `packaging/bundle-cef.sh` then `cargo generate-rpm`
 [package.metadata.generate-rpm]
+auto-req = "builtin"
 assets = [
-  { source = "target/release/tauriwa", dest = "/usr/bin/tauriwa", mode = "755" },
+  { source = "packaging/tauriwa.sh", dest = "/usr/bin/tauriwa", mode = "755" },
+  { source = "target/bundle/tauriwa/tauriwa", dest = "/usr/lib/tauriwa/tauriwa", mode = "755" },
+  { source = "target/bundle/tauriwa/*.so", dest = "/usr/lib/tauriwa/", mode = "644" },
+  { source = "target/bundle/tauriwa/*.so.1", dest = "/usr/lib/tauriwa/", mode = "644" },
+  { source = "target/bundle/tauriwa/*.pak", dest = "/usr/lib/tauriwa/", mode = "644" },
+  { source = "target/bundle/tauriwa/*.dat", dest = "/usr/lib/tauriwa/", mode = "644" },
+  { source = "target/bundle/tauriwa/*.bin", dest = "/usr/lib/tauriwa/", mode = "644" },
+  { source = "target/bundle/tauriwa/*.json", dest = "/usr/lib/tauriwa/", mode = "644" },
+  { source = "target/bundle/tauriwa/locales/*", dest = "/usr/lib/tauriwa/locales/", mode = "644" },
   { source = "packaging/tauriwa.desktop", dest = "/usr/share/applications/tauriwa.desktop", mode = "644" },
   { source = "packaging/tauriwa.svg", dest = "/usr/share/icons/hicolor/scalable/apps/tauriwa.svg", mode = "644" },
   { source = "packaging/io.github.aegis_plus.tauriwa.metainfo.xml", dest = "/usr/share/metainfo/io.github.aegis_plus.tauriwa.metainfo.xml", mode = "644" },
 ]
 [package.metadata.generate-rpm.requires]
-"webkit2gtk4.1" = "*"
-gtk3 = "*"
+xdg-utils = "*"
