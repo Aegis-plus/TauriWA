@@ -5,8 +5,9 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex, OnceLock};
 
-pub const APP_PNG: &[u8] = include_bytes!("../static/app.png");
-pub const APP_512_PNG: &[u8] = include_bytes!("../static/app-512.png");
+// rendered from packaging/tauriwa.svg by build.rs
+pub const APP_PNG: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/app.png"));
+pub const APP_512_PNG: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/app-512.png"));
 
 /// Pixels in the StatusNotifierItem format: ARGB32, network byte order
 #[derive(Debug)]
@@ -156,11 +157,9 @@ mod tests {
 
     #[test]
     fn decode_app_icon() {
-        // static/*.png are stored with git LFS: skip when only the pointer was checked out
-        if !APP_PNG.starts_with(b"\x89PNG") {
-            return;
+        for png in [APP_PNG, APP_512_PNG] {
+            let icon = RgbaIcon::decode(png).unwrap();
+            assert_eq!(icon.argb.len(), (icon.width * icon.height * 4) as usize);
         }
-        let icon = RgbaIcon::decode(APP_PNG).unwrap();
-        assert_eq!(icon.argb.len(), (icon.width * icon.height * 4) as usize);
     }
 }
