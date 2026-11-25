@@ -62,7 +62,7 @@ jobs:
           cargo generate-rpm --output dist/
           name="tauriwa-${version}-linux-x86_64"
           mkdir -p "$name"
-          cp target/release/tauriwa packaging/tauriwa.desktop packaging/tauriwa.svg static/app-512.png README.md LICENSE "$name/"
+          cp target/release/tauriwa packaging/tauriwa.desktop packaging/tauriwa.svg README.md LICENSE "$name/"
           tar -cJf "dist/$name.tar.xz" "$name"
           cd dist && sha256sum * | tee SHA256SUMS
 

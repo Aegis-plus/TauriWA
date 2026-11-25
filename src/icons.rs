@@ -5,8 +5,9 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex, OnceLock};
 
-pub const APP_PNG: &[u8] = include_bytes!("../static/app.png");
-pub const APP_512_PNG: &[u8] = include_bytes!("../static/app-512.png");
+// rendered from packaging/tauriwa.svg by build.rs
+pub const APP_PNG: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/app.png"));
+pub const APP_512_PNG: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/app-512.png"));
 
 /// Pixels in the StatusNotifierItem format: ARGB32, network byte order
 #[derive(Debug)]

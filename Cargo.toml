@@ -41,6 +41,10 @@ codegen-units = 1
 strip = true
 opt-level = "s"
 
+[build-dependencies]
+# renders packaging/tauriwa.svg to the PNGs the app embeds (see build.rs)
+resvg = { version = "0.45", default-features = false }
+
 # `cargo deb`
 [package.metadata.deb]
 section = "net"
@@ -49,8 +53,6 @@ extended-description = "Simple and stable desktop WhatsApp Web client for Linux:
 assets = [
   ["target/release/tauriwa", "usr/bin/", "755"],
   ["packaging/tauriwa.desktop", "usr/share/applications/", "644"],
-  ["static/app-512.png", "usr/share/icons/hicolor/512x512/apps/tauriwa.png", "644"],
-  ["static/app.png", "usr/share/icons/hicolor/256x256/apps/tauriwa.png", "644"],
   ["packaging/tauriwa.svg", "usr/share/icons/hicolor/scalable/apps/tauriwa.svg", "644"],
   ["packaging/io.github.aegis_plus.tauriwa.metainfo.xml", "usr/share/metainfo/", "644"],
 ]
@@ -60,8 +62,6 @@ assets = [
 assets = [
   { source = "target/release/tauriwa", dest = "/usr/bin/tauriwa", mode = "755" },
   { source = "packaging/tauriwa.desktop", dest = "/usr/share/applications/tauriwa.desktop", mode = "644" },
-  { source = "static/app-512.png", dest = "/usr/share/icons/hicolor/512x512/apps/tauriwa.png", mode = "644" },
-  { source = "static/app.png", dest = "/usr/share/icons/hicolor/256x256/apps/tauriwa.png", mode = "644" },
   { source = "packaging/tauriwa.svg", dest = "/usr/share/icons/hicolor/scalable/apps/tauriwa.svg", mode = "644" },
   { source = "packaging/io.github.aegis_plus.tauriwa.metainfo.xml", dest = "/usr/share/metainfo/io.github.aegis_plus.tauriwa.metainfo.xml", mode = "644" },
 ]
