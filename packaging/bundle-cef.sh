@@ -12,12 +12,33 @@ cd "$(dirname "$0")/.."
 release=target/release
 out=target/bundle/tauriwa
 
-# the CEF distribution used by the build, written down by build.rs
-cef_dir=$(cat "$release/cef-dir.txt" 2>/dev/null || true)
-if [ ! -x "$release/tauriwa" ] || [ ! -f "$cef_dir/libcef.so" ]; then
+if [ ! -x "$release/tauriwa" ]; then
     echo "bundle-cef: run 'cargo build --release' first" >&2
     exit 1
 fi
+
+# The CEF distribution the build used: in $CEF_PATH when set, otherwise
+# downloaded by cef-dll-sys into its build directory. (Files the build
+# writes elsewhere may be missing when the build comes from a cache.)
+# "156.7.0+156.0.31" in Cargo.lock -> CEF "156.0.31", the directory name in $CEF_PATH
+version=$(grep -A1 '^name = "cef-dll-sys"' Cargo.lock | sed -n 's/^version = ".*+\(.*\)"/\1/p')
+find_libcef() {
+    [ -d "$1" ] || return 0
+    find "$1" -name libcef.so -path "*$2*" -printf '%h\n' 2>/dev/null | while read -r dir; do
+        if [ -f "$dir/icudtl.dat" ] && [ -d "$dir/locales" ]; then
+            echo "$dir"
+            break
+        fi
+    done
+}
+cef_dir=$(find_libcef "${CEF_PATH:-/nonexistent}" "/$version/")
+[ -n "$cef_dir" ] || cef_dir=$(find_libcef "$release/build" cef-dll-sys)
+[ -n "$cef_dir" ] || cef_dir=$(cat "$release/cef-dir.txt" 2>/dev/null || true)
+if [ ! -f "$cef_dir/libcef.so" ]; then
+    echo "bundle-cef: CEF distribution not found (CEF_PATH=${CEF_PATH:-unset})" >&2
+    exit 1
+fi
+echo "bundle-cef: using $cef_dir"
 
 rm -rf "$out"
 mkdir -p "$out"
